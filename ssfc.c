@@ -1,7 +1,6 @@
 #define FUSE_USE_VERSION 28
 #include <fuse.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -36,11 +35,12 @@ void enkrip(char src[10000]){
     }
 }
 
-int enk(char src[10000]){
+int enk(char *src){
     DIR *dp;
     struct dirent *d;
-    char name[100000];
-    char path[10000], path1[10000], path2[100000];
+    char name[100];
+    char path[1000], path1[1000]; 
+    char path2[3000];
 
     dp = opendir(src);
     if(dp == NULL){
@@ -54,15 +54,15 @@ int enk(char src[10000]){
         strcpy(name, d->d_name);
         sprintf(path, "%s/%s", src, name);
 
-        if(!strcmp(name, ".") && !strcmp(name, "..") && d->d_type == DT_DIR){
-            char folder[10000];
-            char path3[10000];
+        if(strcmp(name, ".") && strcmp(name, "..") && d->d_type == DT_DIR){
+            char folder[1000];
 
-            strcpy(path3, path);
             strcpy(folder, name);
             enkrip(folder);
 
-            sprintf(path1, "%s/%s", path, folder);
+            strcpy(path1, path);
+            sprintf(path2, "%s/%s", path1, folder);
+
             int res = rename(path1, path2);
             if(res!=0){
                 return -errno;
@@ -82,12 +82,13 @@ int enk(char src[10000]){
                 size_t n = sizeof(name)/sizeof(name[0]);
                 
                 int noext = z-n+1;
-                char noname[10000];
+                char noname[1000];
 
                 snprintf(noname, noext, "%s", name);
                 enkrip(noname);
 
-                sprintf(path2, "%s/%s%s", path, noname, ext);
+                strcat(noname, ext);
+                sprintf(path2, "%s/%s", path, noname);
             }
 
             int res = rename(path, path2);
@@ -148,8 +149,6 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		sprintf(name,"%s", path);
 		sprintf(fpath, "%s%s", dirpath, name);
 	}
-    
-    int res = 0;
 
 	DIR *dp;
 	struct dirent *de;
@@ -178,7 +177,6 @@ static int xmp_mkdir(const char *path, mode_t mode){
 	int res;
 
 	char fpath[1000];
-    char name[1000];
 
     sprintf(fpath,"%s%s", dirpath, path);
 
@@ -192,15 +190,18 @@ static int xmp_mkdir(const char *path, mode_t mode){
 static int xmp_rename(const char *from, const char *to){
 	int res;
     char fpath[1000];
+    char fpath1[1000];
     char name[1000];
+
+    sprintf(fpath, "%s%s", dirpath, from);
+    sprintf(fpath1, "%s%s", dirpath, to);
 
     if(strncmp(to, enc1, 7) == 0){
         sprintf(name, "%s", to);
-        enk(name);
-        sprintf(fpath, "%s%s", dirpath, name);
+        enk(fpath);
     }
 
-	res = rename(from, name);
+	res = rename(fpath, fpath1);
 	if (res == -1)
 		return -errno;
 
