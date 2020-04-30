@@ -11,13 +11,106 @@ Source Code : [ssfc.c](https://github.com/daffaaflah6/SoalShiftSISOP20_modul4_C1
 - Setiap pembuatan direktori terenkripsi baru (mkdir ataupun rename) akan tercatat ke sebuah database/log berupa file.
 - Semua file yang berada dalam direktori ter enkripsi menggunakan caesar cipher dengan key.
 
-
 ```9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO```
 
 Misal kan ada file bernama “kelincilucu.jpg” dalam directory FOTO_PENTING, dan key yang dipakai adalah 10
 “encv1_rahasia/FOTO_PENTING/kelincilucu.jpg” => “encv1_rahasia/ULlL@u]AlZA(/g7D.|_.Da_a.jpg
 Note : Dalam penamaan file ‘/’ diabaikan, dan ekstensi tidak perlu di encrypt.
 - Metode enkripsi pada suatu direktori juga berlaku kedalam direktori lainnya yang ada didalamnya.
+
+```c
+int ext(char* path){
+	int i;
+	int len = strlen(path);
+
+	for(i=len-1; i >=0; i--){
+		if(path[i] == '.'){
+			return i;
+		}
+	}
+
+	return len;
+}
+
+int slash(char* path, int bil){
+	int i;
+	int len = strlen(path);
+
+	for(i=0; i<len; i++){
+		if(path[i] == '/'){
+			return i + 1;
+		}
+	}
+
+	return bil;
+}
+```
+- Fungsi di atas digunakan untuk mengetahui index dari file yang akan di-encrypt dan di-decrypt tanpa mengikutsertakan slash dan ekstensi dari path awal.
+
+```c
+void enk(char *path)		// ke kiri
+{
+	if (!strcmp(path, ".") || !strcmp(path, ".."))
+		return;
+
+	int temp = 0, i, j;
+
+	int end = ext(path);
+	int start = slash(path, 0);
+
+	for (i = start; i < end; i++)
+	{
+		if(path[i] != '/'){
+			for (j = 0; j < strlen(list); j++)
+			{
+				if (path[i] == list[j])
+				{
+					temp = (j + k) % strlen(list);
+					path[i] = list[temp];
+					break;
+				}
+			}
+		}
+	}
+}
+```
+- Fungsi enk akan dipanggil di ```xmp_readdir``` agar FUSE melakukan encrypt di FUSE.
+
+```c
+void dek(char *path)
+{
+	if(!strcmp(path, ".") || !strcmp(path, ".."))
+		return;
+
+	int temp = 0, i, j;
+
+	int end = ext(path);
+	int start = slash(path, end);
+
+	for (i = start; i < end; i++)
+	{
+		if(path[i] != '/'){
+			for (j = 0; j < strlen(list); j++)
+			{
+				if (path[i] == list[j])
+				{
+					temp = (j + (strlen(list) - k)) % strlen(list);
+					path[i] = list[temp];
+					break;
+				}
+			}
+		}
+	}
+}
+```
+- Fungsi dek dipanggil di semua fungsi yang lain seperti ```mkdir```, ```read```, ```write```, dll. Fungsi dek dipanggil agar pada saat FUSE dijalankan, decrypt dilakukan di mount folder.
+
+```c
+char *a = strstr(path, enc1);
+	if(a != NULL)
+		dek(a);
+```
+- Pada saat pemanggilan dek, akan ada pemeriksaan menggunakan ```strstr``` agar isi folder yang di-decrypt hanya yang berawalan encv1_.
 
 # 2. Enkripsi versi 2
 - Jika sebuah direktori dibuat dengan awalan “encv2_”, maka direktori tersebut akan menjadi direktori terenkripsi menggunakan metode enkripsi v2.

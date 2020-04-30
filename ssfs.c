@@ -15,7 +15,7 @@ static const char *dirpath = "/home/bela/shift4";
 char *list = {"9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO"};
 const int k = 10;
 char enc1[10] = "encv1_";
-static const char *logsys = "/home/syarif/fs.log";
+static const char *logsys = "/home/bela/fs.log";
 
 int ext(char* path){
 	int i;
