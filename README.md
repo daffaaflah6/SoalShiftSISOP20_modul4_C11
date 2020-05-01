@@ -117,7 +117,10 @@ char *a = strstr(path, enc1);
 - Jika sebuah direktori di-rename dengan awalan “encv2_”, maka direktori tersebut akan menjadi direktori terenkripsi menggunakan metode enkripsi v2.
 - Apabila sebuah direktori terenkripsi di-rename menjadi tidak terenkripsi, maka isi direktori tersebut akan terdekrip.
 - Setiap pembuatan direktori terenkripsi baru (mkdir ataupun rename) akan tercatat ke sebuah database/log berupa file.
-- Pada enkripsi v2, file-file pada direktori asli akan menjadi bagian-bagian kecil sebesar 1024 bytes dan menjadi normal ketika diakses melalui filesystem rancangan jasir. Sebagai contoh, file File_Contoh.txt berukuran 5 kB pada direktori asli akan menjadi 5 file kecil yakni: File_Contoh.txt.000, File_Contoh.txt.001, File_Contoh.txt.002, File_Contoh.txt.003, dan File_Contoh.txt.004.
+- Pada enkripsi v2, file-file pada direktori asli akan menjadi bagian-bagian kecil sebesar 1024 bytes dan menjadi normal ketika diakses melalui filesystem rancangan jasir. Sebagai contoh,
+```
+file File_Contoh.txt berukuran 5 kB pada direktori asli akan menjadi 5 file kecil yakni: File_Contoh.txt.000, File_Contoh.txt.001, File_Contoh.txt.002, File_Contoh.txt.003, dan File_Contoh.txt.004.
+```
 - Metode enkripsi pada suatu direktori juga berlaku kedalam direktori lain yang ada didalam direktori tersebut (rekursif).
 
 # 3. Sinkronisasi Direktori Otomatis
@@ -161,3 +164,49 @@ INFO::200419-18:29:28::MKDIR::/iz1
 INFO::200419-18:29:33::CREAT::/iz1/yena.jpg
 INFO::200419-18:29:33::RENAME::/iz1/yena.jpg::/iz1/yena.jpeg
 ```
+
+Untuk fungsi log systemnya seperti berikut
+```
+void logging(int level, char *comm, char *first, char *last){
+    FILE *f1 = fopen(logsys, "a+");
+    int year, month, day, hour, minute, second;
+    char rev[1000], lvl[25];
+    memset(rev, 0, 1000*sizeof(char));
+    memset(lvl, 0, 25*sizeof(char));
+
+    time_t t;
+    struct tm* loc;
+    time(&t);
+    loc = localtime(&t);
+
+    year = (loc->tm_year + 1900)%1000;
+    month = loc->tm_mon+1;
+    day = loc->tm_mday;
+    hour = loc->tm_hour;
+    minute = loc->tm_min;
+    second = loc->tm_sec;
+
+    if(level == 0){
+        strcpy(lvl, "WARNING");
+    }
+    else{
+        strcpy(lvl,"INFO");
+    }
+
+    if(last == NULL){
+        sprintf(rev,"%s::%d%d%d-%d:%d:%d::%s::%s\n", lvl, year, month, day, hour, minute, second, comm, first);
+    }
+    else{
+        sprintf(rev,"%s::%d%d%d-%d:%d:%d::%s::%s::%s\n", lvl, year, month, day, hour, minute, second, comm, first, last);
+    }
+
+    fclose(f1);
+}
+```
+
+Kemudian fungsi log system akan dipanggil di beberapa fungsi dibawah ini untuk  FUSE menjalankan fungsi log systemnya :
+- xmp_mkdir dengan cara `logging(1, "MKDIR", fpath, NULL);`
+- xmp_rmdir dengan cara `logging(0,"RMDIR",fpath,NULL);`
+- xmp_rename dengan cara `logging(1, "RENAME", fpath, fpath1);`
+- xmp_mknod dengan cara `logging(1, "MKNODE", fpath, NULL);`
+- xmp_unlink dengan cara `logging(0, "UNLINK", fpath, NULL);`
