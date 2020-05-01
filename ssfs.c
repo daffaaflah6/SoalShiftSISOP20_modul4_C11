@@ -16,6 +16,7 @@ char *list = {"9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt
 const int k = 10;
 char enc1[10] = "encv1_";
 static const char *logsys = "/home/bela/fs.log";
+char temp_sync[1000];
 
 int ext(char* path){
 	int i;
@@ -114,7 +115,7 @@ void logging(int level, char *comm, char *first, char *last){
     minute = loc->tm_min;
     second = loc->tm_sec;
 
-    if(lvl == 0){
+    if(level == 0){
         strcpy(lvl, "WARNING");
     }
     else{
@@ -129,6 +130,21 @@ void logging(int level, char *comm, char *first, char *last){
     }
 
     fclose(f1);
+}
+
+char* add_sync(char *path){
+    memset(temp_sync,0,100*sizeof(char));
+    sprintf(temp_sync,"sync_%s",path);
+    return temp_sync;
+}
+
+void del_sync(char *string, char *sub) {
+    char *match;
+    int len = strlen(sub);
+    while ((match = strstr(string, sub))) {
+        *match = '\0';
+        strcat(string, match+len);
+    }
 }
 
 static int xmp_getattr(const char *path, struct stat *stbuf)
@@ -147,6 +163,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
 	res = lstat(fpath, stbuf);
 	if (res == -1)
 		return -errno;
@@ -168,6 +185,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		sprintf(fpath, "%s", path);
 	}else{
 		sprintf(fpath, "%s%s", dirpath, path);
+        del_sync(fpath,"sync_");
 	}
 
 	int res = 0;
@@ -215,6 +233,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		sprintf(fpath, "%s", path);
 	}else{
 		sprintf(fpath, "%s%s", dirpath, path);
+        del_sync(fpath,"sync_");
 	}
 
 	int res = 0;
@@ -253,6 +272,7 @@ static int xmp_mkdir(const char *path, mode_t mode)
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
 	logging(1, "MKDIR", fpath, NULL);
 
 	res = mkdir(fpath, mode);
@@ -277,6 +297,7 @@ static int xmp_rmdir(const char *path)
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
 	logging(0,"RMDIR",fpath,NULL);
 
 	res = rmdir(fpath);
@@ -299,6 +320,8 @@ static int xmp_rename(const char *from, const char *to)
 	sprintf(fpath, "%s%s", dirpath, from);
 	sprintf(fpath1, "%s%s", dirpath, to);
 
+    del_sync(fpath,"sync_");
+    del_sync(fpath1,"sync_");
 	logging(1, "RENAME", fpath, fpath1);
 
 	res = rename(fpath, fpath1);
@@ -323,6 +346,7 @@ static int xmp_truncate(const char *path, off_t size)
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
 	res = truncate(fpath, size);
 	if (res == -1)
 		return -errno;
@@ -479,6 +503,7 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev) {
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
 	logging(1, "MKNODE", fpath, NULL);
 
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
@@ -512,6 +537,7 @@ static int xmp_unlink(const char *path){
 		sprintf(fpath, "%s%s", dirpath, path);
 	}
 
+    del_sync(fpath,"sync_");
     logging(0, "UNLINK", fpath, NULL);
     res = unlink(fpath);
     if(res == -1){
