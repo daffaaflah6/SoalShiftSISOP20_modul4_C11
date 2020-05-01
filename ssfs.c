@@ -96,6 +96,42 @@ void dek(char *path)
 	}
 }
 
+void enk2(char *path){
+	chdir(path);
+	DIR *d;
+    struct dirent *dp;
+	struct stat stat;
+    d = opendir(".");
+
+	if(d){
+		while((dp = readdir(d))!= NULL){
+			if(S_ISDIR(stat.st_mode)){
+				if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")) continue;
+				char fpath[1000];
+
+				sprintf(fpath, "%s/%s", path, dp->d_name);
+				enk2(fpath);
+			} else {
+				char fpath1[1000];
+				char fpath2[1000];
+				int status;
+
+				sprintf(fpath1, "%s/%s", path, dp->d_name);
+    			sprintf(fpath2, "%s.", fpath1);
+
+    			pid_t child = fork();
+
+    			if (child == 0){
+					execl("/usr/bin/split", "split", "-b", "1024", "-d", "-a", "3", fpath1, fpath2, NULL);
+				} else {
+					while (wait(&status) > 0);
+					execl("/bin/rm", "rm", "fpath2", NULL);
+				}
+			}
+		}
+	}
+}
+
 void logging(int level, char *comm, char *first, char *last){
     FILE *f1 = fopen(logsys, "a+");
     int year, month, day, hour, minute, second;
@@ -322,11 +358,23 @@ static int xmp_rename(const char *from, const char *to)
 
     del_sync(fpath,"sync_");
     del_sync(fpath1,"sync_");
-	logging(1, "RENAME", fpath, fpath1);
+	
 
 	res = rename(fpath, fpath1);
 	if (res == -1)
 		return -errno;
+
+	logging(1, "RENAME", fpath, fpath1);
+
+	if (strstr(to, enc2) != NULL){
+		enk2(fpath1);
+		logging(1, "ENCRYPT2", from, to);
+	}
+
+	// if (strstr(from, enc2) != NULL && strstr(to, enc2) == NULL){
+	// 	dek2(fpath1);
+	// 	logging(1, "DECRYPT2", from, to);
+	// }
 
 	return 0;
 }
