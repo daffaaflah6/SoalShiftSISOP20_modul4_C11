@@ -3,18 +3,25 @@
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <wait.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <ctype.h>
+#include <time.h>
 
 static const char *dirpath = "/home/bela/shift4";
 
 char *list = {"9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO"};
 const int k = 10;
 char enc1[10] = "encv1_";
+char enc2[10] = "encv2_";
 static const char *logsys = "/home/bela/fs.log";
 char temp_sync[1000];
 
@@ -96,40 +103,42 @@ void dek(char *path)
 	}
 }
 
-void enk2(char *path){
+void enk2(char *path)
+{
 	chdir(path);
 	DIR *d;
     struct dirent *dp;
-	struct stat stat;
+	struct stat st;
     d = opendir(".");
 
-	if(d){
-		while((dp = readdir(d))!= NULL){
-			if(S_ISDIR(stat.st_mode)){
-				if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")) continue;
+    if (d){
+        while ((dp = readdir(d)) != NULL){
+			if (stat(dp->d_name, &st) < 0);
+			else if (S_ISDIR(st.st_mode)){
+				if (strcmp(dp->d_name,".")==0 || strcmp(dp->d_name,"..")==0) continue;
 				char fpath[1000];
-
-				sprintf(fpath, "%s/%s", path, dp->d_name);
+				sprintf(fpath,"%s/%s", path, dp->d_name);
 				enk2(fpath);
-			} else {
-				char fpath1[1000];
-				char fpath2[1000];
+			}else{
+				char awal1[1000];
+				sprintf(awal1,"%s/%s", path, dp->d_name);
+				char awal2[3000];
+				sprintf(awal2,"%s.", awal1);
+				pid_t child_id = fork();
 				int status;
-
-				sprintf(fpath1, "%s/%s", path, dp->d_name);
-    			sprintf(fpath2, "%s.", fpath1);
-
-    			pid_t child = fork();
-
-    			if (child == 0){
-					execl("/usr/bin/split", "split", "-b", "1024", "-d", "-a", "3", fpath1, fpath2, NULL);
-				} else {
-					while (wait(&status) > 0);
-					execl("/bin/rm", "rm", "fpath2", NULL);
+				if (child_id == 0){
+					pid_t child = fork();
+					if (child == 0){
+						execl("/usr/bin/split", "split","-b","1024","-a","3","-d", awal1, awal2, NULL);
+					}else {
+						while ((wait(&status))>0);
+						execl("/bin/rm", awal1, NULL);
+					}	
 				}
 			}
 		}
-	}
+    }
+	return;
 }
 
 void logging(int level, char *comm, char *first, char *last){
@@ -368,12 +377,12 @@ static int xmp_rename(const char *from, const char *to)
 
 	if (strstr(to, enc2) != NULL){
 		enk2(fpath1);
-		logging(1, "ENCRYPT2", from, to);
+		logging(1, "ENCRYPT2", fpath, fpath1);
 	}
 
 	// if (strstr(from, enc2) != NULL && strstr(to, enc2) == NULL){
 	// 	dek2(fpath1);
-	// 	logging(1, "DECRYPT2", from, to);
+	// 	logging(1, "DECRYPT2", fpath, fpath1);
 	// }
 
 	return 0;
