@@ -123,6 +123,60 @@ file File_Contoh.txt berukuran 5 kB pada direktori asli akan menjadi 5 file keci
 ```
 - Metode enkripsi pada suatu direktori juga berlaku kedalam direktori lain yang ada didalam direktori tersebut (rekursif).
 
+- Fungsi enkripsi 2:
+```c
+void enk2(char *path)
+{
+	chdir(path);
+	DIR *d;
+    struct dirent *dp;
+	struct stat st;
+    d = opendir(".");
+
+    if (d){
+        while ((dp = readdir(d)) != NULL){
+			if (stat(dp->d_name, &st) < 0);
+			else if (S_ISDIR(st.st_mode)){
+				if (strcmp(dp->d_name,".")==0 || strcmp(dp->d_name,"..")==0) continue;
+				char fpath[1000];
+				sprintf(fpath,"%s/%s", path, dp->d_name);
+				enk2(fpath);
+			}else{
+				char awal1[1000];
+				sprintf(awal1,"%s/%s", path, dp->d_name);
+				char awal2[3000];
+				sprintf(awal2,"%s.", awal1);
+				pid_t child_id = fork();
+				int status;
+				if (child_id == 0){
+					pid_t child = fork();
+					if (child == 0){
+						execl("/usr/bin/split", "split","-b","1024","-a","3","-d", awal1, awal2, NULL);
+					}else {
+						while ((wait(&status))>0);
+						char *argv[]={"rm", awal1, NULL};
+						execv("/bin/rm", argv);
+					}	
+				}
+			}
+		}
+    }
+	return;
+}
+```
+- Fungsi ini akan dipanggil pada ```xmp_rename```
+- Fungsi menggunakan fork, wait, dan exec untuk memecah file menjadi 1kb.
+- Dilakukan rekursi apabila yang ditemui adalah directory.
+- Menggunakan split dan remove untuk memecah file dan menghapus setelah file sudah selesai dipecah.
+
+```c
+if (strstr(to, enc2) != NULL){
+		enk2(fpath1);
+		logging(1, "ENCRYPT2", fpath, fpath1);
+	}
+```
+- Pada ```xmp_rename``` dilakukan pengecekan strstr terhadap path yang akan di-rename. Sehingga apabila path yang di-rename menjadi encv2_, isi dari folder tersebut akan dipecah.
+
 # 3. Sinkronisasi Direktori Otomatis
 Tanpa mengurangi keumuman, misalkan suatu directory bernama dir akan tersinkronisasi dengan directory yang memiliki nama yang sama dengan awalan sync_ yaitu sync_dir. Persyaratan untuk sinkronisasi yaitu:
 - Kedua directory memiliki parent directory yang sama.
