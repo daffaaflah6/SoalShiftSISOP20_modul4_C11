@@ -132,7 +132,8 @@ void enk2(char *path)
 						execl("/usr/bin/split", "split","-b","1024","-a","3","-d", awal1, awal2, NULL);
 					}else {
 						while ((wait(&status))>0);
-						execl("/bin/rm", awal1, NULL);
+						char *argv[]={"rm", awal1, NULL};
+						execv("/bin/rm", argv);
 					}	
 				}
 			}
